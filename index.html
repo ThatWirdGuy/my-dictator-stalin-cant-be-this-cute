@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>My Dictator Stalin Can&#39;t Be This Cute</title>
+		<title>My Dictator Stalin Can't Be This Cute</title>
 		<style>
 html, body, #canvas {
 	margin: 0;
@@ -152,7 +152,6 @@ const engine = new Engine(GODOT_CONFIG);
 
 	if (missing.length !== 0) {
 		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			// There's a chance that installing the service worker would fix the issue
 			Promise.race([
 				navigator.serviceWorker.getRegistration().then((registration) => {
 					if (registration != null) {
@@ -160,7 +159,6 @@ const engine = new Engine(GODOT_CONFIG);
 					}
 					return registration;
 				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
 				new Promise((resolve) => {
 					setTimeout(() => resolve(), 2000);
 				}),
@@ -170,7 +168,6 @@ const engine = new Engine(GODOT_CONFIG);
 				window.location.reload();
 			});
 		} else {
-			// Display the message as usual
 			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
 			displayFailureNotice(missingMsg + missing.join('\n'));
 		}
@@ -187,7 +184,10 @@ const engine = new Engine(GODOT_CONFIG);
 				}
 			},
 		}).then(() => {
+			// --- THE EFFECTED CHANGE IS HERE ---
 			setStatusMode('hidden');
+			alert("Game Loaded!"); 
+			// -----------------------------------
 		}, displayFailureNotice);
 	}
 }());
