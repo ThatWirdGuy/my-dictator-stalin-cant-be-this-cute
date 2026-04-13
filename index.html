@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
     <title>My Dictator Stalin Can't Be This Cute</title>
     <style>
-        html, body, #canvas { margin: 0; padding: 0; border: 0; }
-        body { color: white; background-color: black; overflow: hidden; touch-action: none; }
+        html, body, #canvas { margin: 0; padding: 0; border: 0; width: 100%; height: 100%; }
+        body { color: white; background-color: black; overflow: hidden; touch-action: none; display: flex; }
         #canvas { display: block; }
         #canvas:focus { outline: none; }
         #status, #status-splash, #status-progress { position: absolute; left: 0; right: 0; }
         #status, #status-splash { top: 0; bottom: 0; }
-        #status { background-color: #242424; display: flex; flex-direction: column; justify-content: center; align-items: center; visibility: hidden; }
+        #status { background-color: #242424; display: flex; flex-direction: column; justify-content: center; align-items: center; visibility: hidden; z-index: 10; }
         #status-splash { max-height: 100%; max-width: 100%; margin: auto; }
         #status-progress, #status-notice { display: none; }
         #status-progress { bottom: 10%; width: 50%; margin: 0 auto; }
@@ -20,7 +20,6 @@
 </head>
 <body>
     <canvas id="canvas">Your browser does not support the canvas tag.</canvas>
-    <noscript>Your browser does not support JavaScript.</noscript>
     <div id="status">
         <img id="status-splash" src="index.png" alt="">
         <progress id="status-progress"></progress>
@@ -37,62 +36,57 @@
             const statusProgress = document.getElementById('status-progress');
             const statusNotice = document.getElementById('status-notice');
             let initializing = true;
-            let statusMode = '';
 
             function setStatusMode(mode) {
-                if (statusMode === mode || !initializing) return;
+                if (!initializing) return;
                 if (mode === 'hidden') { statusOverlay.remove(); initializing = false; return; }
                 statusOverlay.style.visibility = 'visible';
                 statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
                 statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-                statusMode = mode;
             }
 
             function displayFailureNotice(err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                statusNotice.innerText = msg;
+                statusNotice.innerText = err instanceof Error ? err.message : String(err);
                 setStatusMode('notice');
                 initializing = false;
             }
 
-            // Check if we are Cross-Origin Isolated
-            const isIsolated = window.crossOriginIsolated;
-
-            if (!isIsolated && 'serviceWorker' in navigator) {
-                // Register service worker and force a reload to apply headers
-                navigator.serviceWorker.register(GODOT_CONFIG.serviceWorker).then((registration) => {
-                    registration.update().then(() => {
-                        if (!sessionStorage.getItem('sw_active')) {
-                            sessionStorage.setItem('sw_active', 'true');
-                            window.location.reload();
-                        } else {
-                            // If we reloaded and it's still not isolated, the browser/host might be blocking it
-                            checkAndStart();
-                        }
-                    });
+            // Register Service Worker to handle Cross-Origin Isolation
+            if (!window.crossOriginIsolated && 'serviceWorker' in navigator) {
+                navigator.serviceWorker.register(GODOT_CONFIG.serviceWorker).then(() => {
+                    if (!sessionStorage.getItem('sw_fixed')) {
+                        sessionStorage.setItem('sw_fixed', 'true');
+                        window.location.reload();
+                    } else {
+                        startEngine();
+                    }
                 }).catch(displayFailureNotice);
             } else {
-                checkAndStart();
+                startEngine();
             }
 
-            function checkAndStart() {
+            function startEngine() {
                 const missing = Engine.getMissingFeatures({ threads: true });
                 if (missing.length !== 0) {
                     displayFailureNotice("Missing features: " + missing.join(", "));
-                } else {
-                    setStatusMode('progress');
-                    engine.startGame({
-                        onProgress: (current, total) => {
-                            if (total > 0) {
-                                statusProgress.value = current;
-                                statusProgress.max = total;
-                            }
-                        }
-                    }).then(() => {
-                        setStatusMode('hidden');
-                        alert("Game Loaded!"); 
-                    }, displayFailureNotice);
+                    return;
                 }
+
+                setStatusMode('progress');
+                engine.startGame({
+                    onProgress: (current, total) => {
+                        if (total > 0) {
+                            statusProgress.value = current;
+                            statusProgress.max = total;
+                        }
+                    }
+                }).then(() => {
+                    setStatusMode('hidden');
+                    // Timeout ensures the game renders its first frame before the alert stops the script
+                    setTimeout(() => { 
+                        alert("Game Loaded!"); 
+                    }, 150);
+                }, displayFailureNotice);
             }
         }());
     </script>
